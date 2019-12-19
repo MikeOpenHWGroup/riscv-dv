@@ -804,6 +804,7 @@ class riscv_asm_program_gen extends uvm_object;
       push_gpr_to_kernel_stack(status, scratch, cfg.mstatus_mprv, cfg.sp, cfg.tp, intr_handler);
       // If nested interrupts are enabled, set xSTATUS.xIE in the interrupt handler
       // to re-enable interrupt handling capabilities
+`ifndef DEPRECATED
       if (cfg.enable_nested_interrupt) begin
         case (status)
           MSTATUS: begin
@@ -817,6 +818,7 @@ class riscv_asm_program_gen extends uvm_object;
           end
         endcase
       end
+`endif
       gen_signature_handshake(.instr(intr_handler), .signature_type(CORE_STATUS), .core_status(HANDLING_IRQ));
       intr_handler = {intr_handler,
                       $sformatf("csrr x%0d, 0x%0x # %0s", cfg.gpr[0], cause, cause.name()),

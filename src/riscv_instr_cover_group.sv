@@ -20,8 +20,13 @@
   `define DV(TEXT)
 `endif
 
+`ifdef DEPRECATED
+`define SAMPLE(cg, val) \
+  cg.sample(val);
+`else
 `define SAMPLE(cg, val) \
   if (cg != null) cg.sample(val);
+`endif
 
 `define INSTR_CG_BEGIN(INSTR_NAME) \
   covergroup ``INSTR_NAME``_cg with function sample(riscv_instr_cov_item instr);

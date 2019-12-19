@@ -1,3 +1,35 @@
+## DSIM developers fork of RISCV-DV
+
+Fork of https://github.com/google/riscv-dv/tree/master/, commit 9ecee87bbc41650ca0f8846de9a277bec2783e18
+This project exists to aid integration of the Google RISCV-DV project and the Metrics **_dsim_** SystemVerilog
+simulator.
+
+### Quick and Dirty Summary
+
+The git logs will give you more detail, but just to make it easy to find, the following files were modified:
+- modified:   src/riscv_asm_program_gen.sv
+- modified:   src/riscv_instr_cover_group.sv
+- modified:   yaml/simulator.yaml
+- modified:   .gitignore
+
+As explained below the scriptware wants a set of shell environment variables set. At
+a minium you'll need (assuming you are running dsim/20191112.5.1):
+- export DSIM="/tools/Metrics/dsim/20191112.5.1/bin/dsim"
+- export DSIM_LIB_PATH="/tools/Metrics/dsim/20191112.5.1/uvm-1.2/src/dpi"
+- export RISCV_GCC="/opt/riscv/bin/riscv32-unknown-elf-gcc"
+- export RISCV_OBJCOPY="/opt/riscv/bin/riscv32-unknown-elf-objcopy"
+- export SPIKE_PATH="/opt/riscv-64/bin/spike"
+
+With the above changes/updates the following command generates a couple of test
+programs and runs them through the compiler.   Still need to figure out how to
+get the ELF files generated.
+
+$ python3 run.py --test riscv_arithmetic_basic_test --steps gen,gcc_compile  --simulator dsim
+
+TODO: So it compiles and runs, but more work is required.  A few of the changes made
+simply comment out code that **_dsim_** doesn't like.  We need to find out
+why and implement real fixes.
+
 ## Overview
 
 RISCV-DV is a SV/UVM based open-source instruction generator for RISC-V

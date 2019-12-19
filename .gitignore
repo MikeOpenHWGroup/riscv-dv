@@ -11,3 +11,6 @@ qrun.out/
 qrun.log
 *.ucdb
 *.vstf
+dsim.env
+metrics.db
+metrics_history.db
