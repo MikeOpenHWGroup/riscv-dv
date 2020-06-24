@@ -20,7 +20,7 @@
 // instruction, mix two instruction streams etc.
 class riscv_instr_stream extends uvm_object;
 
-  `INSTR                instr_list[$];
+  riscv_instr           instr_list[$];
   int unsigned          instr_cnt;
   string                label = "";
   // User can specify a small group of available registers to generate various hazard condition
@@ -28,6 +28,7 @@ class riscv_instr_stream extends uvm_object;
   // Some additional reserved registers that should not be used as rd register
   // by this instruction stream
   riscv_reg_t           reserved_rd[];
+  int                   hart;
 
   `uvm_object_utils(riscv_instr_stream)
   `uvm_object_new
@@ -40,16 +41,16 @@ class riscv_instr_stream extends uvm_object;
   endfunction
 
   virtual function void create_instr_instance();
-    `INSTR instr;
+    riscv_instr instr;
     for(int i = 0; i < instr_cnt; i++) begin
-      instr = `INSTR::type_id::create($sformatf("instr_%0d", i));
+      instr = riscv_instr::type_id::create($sformatf("instr_%0d", i));
       instr_list.push_back(instr);
     end
   endfunction
 
   // Insert an instruction to the existing instruction stream at the given index
   // When index is -1, the instruction is injected at a random location
-  function void insert_instr(`INSTR instr, int idx = -1);
+  function void insert_instr(riscv_instr instr, int idx = -1);
     int current_instr_cnt = instr_list.size();
     if(idx == -1) begin
       idx = $urandom_range(0, current_instr_cnt-1);
@@ -70,7 +71,7 @@ class riscv_instr_stream extends uvm_object;
   // Insert an instruction to the existing instruction stream at the given index
   // When index is -1, the instruction is injected at a random location
   // When replace is 1, the original instruction at the inserted position will be replaced
-  function void insert_instr_stream(`INSTR new_instr[], int idx = -1, bit replace = 1'b0);
+  function void insert_instr_stream(riscv_instr new_instr[], int idx = -1, bit replace = 1'b0);
     int current_instr_cnt = instr_list.size();
     int new_instr_cnt = new_instr.size();
     if(current_instr_cnt == 0) begin
@@ -119,7 +120,7 @@ class riscv_instr_stream extends uvm_object;
   // Mix the input instruction stream with the original instruction, the instruction order is
   // preserved. When 'contained' is set, the original instruction stream will be inside the
   // new instruction stream with the first and last instruction from the input instruction stream.
-  function void mix_instr_stream(`INSTR new_instr[], bit contained = 1'b0);
+  function void mix_instr_stream(riscv_instr new_instr[], bit contained = 1'b0);
     int current_instr_cnt = instr_list.size();
     int insert_instr_position[];
     int new_instr_cnt = new_instr.size();
@@ -167,7 +168,7 @@ class riscv_rand_instr_stream extends riscv_instr_stream;
   `uvm_object_new
 
   virtual function void create_instr_instance();
-    `INSTR instr;
+    riscv_instr instr;
     for (int i = 0; i < instr_cnt; i++) begin
       instr_list.push_back(null);
     end
@@ -183,6 +184,18 @@ class riscv_rand_instr_stream extends riscv_instr_stream;
                                       riscv_instr::instr_category[STORE]};
     end
     setup_instruction_dist(no_branch, no_load_store);
+  endfunction
+
+  virtual function void randomize_avail_regs();
+    if(avail_regs.size() > 0) begin
+      `DV_CHECK_STD_RANDOMIZE_WITH_FATAL(avail_regs,
+                                         unique{avail_regs};
+                                         avail_regs[0] inside {[S0 : A5]};
+                                         foreach(avail_regs[i]) {
+                                           !(avail_regs[i] inside {cfg.reserved_regs, reserved_rd});
+                                         },
+                                         "Cannot randomize avail_regs")
+    end
   endfunction
 
   function void setup_instruction_dist(bit no_branch = 1'b0, bit no_load_store = 1'b1);
@@ -226,6 +239,7 @@ class riscv_rand_instr_stream extends riscv_instr_stream;
     end
     instr = riscv_instr::get_rand_instr(.include_instr(allowed_instr),
                                         .exclude_instr(exclude_instr));
+    instr.m_cfg = cfg;
     randomize_gpr(instr);
   endfunction
 
@@ -242,25 +256,24 @@ class riscv_rand_instr_stream extends riscv_instr_stream;
           rd  inside {avail_regs};
         }
       }
-      if (reserved_rd.size() > 0) {
+      foreach (reserved_rd[i]) {
         if (has_rd) {
-          !(rd inside {reserved_rd});
+          rd != reserved_rd[i];
         }
         if (format == CB_FORMAT) {
-          !(rs1 inside {reserved_rd});
+          rs1 != reserved_rd[i];
         }
       }
-      if (cfg.reserved_regs.size() > 0) {
+      foreach (cfg.reserved_regs[i]) {
         if (has_rd) {
-          !(rd inside {cfg.reserved_regs});
+          rd != cfg.reserved_regs[i];
         }
         if (format == CB_FORMAT) {
-          !(rs1 inside {cfg.reserved_regs});
+          rs1 != cfg.reserved_regs[i];
         }
       }
       // TODO: Add constraint for CSR, floating point register
     )
   endfunction
-
 
 endclass

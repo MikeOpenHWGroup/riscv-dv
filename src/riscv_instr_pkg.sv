@@ -1,5 +1,6 @@
 /*
  * Copyright 2018 Google LLC
+ * Copyright 2020 Andes Technology Co., Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +26,8 @@ package riscv_instr_pkg;
   import riscv_signature_pkg::*;
 
   `define include_file(f) `include `"f`"
+
+  uvm_cmdline_processor  inst;
 
   // Data section setting
   typedef struct {
@@ -87,10 +90,11 @@ package riscv_instr_pkg;
     RV64C,
     RV128I,
     RV128C,
-    RV32V,
+    RVV,
     RV32B,
-    RV64V,
-    RV64B
+    RV64B,
+    RV32X,
+    RV64X
   } riscv_instr_group_t;
 
   typedef enum {
@@ -143,6 +147,108 @@ package riscv_instr_pkg;
     CSRRWI,
     CSRRSI,
     CSRRCI,
+    // RV32B instructions
+    ANDN,
+    ORN,
+    XNOR,
+    GORC,
+    SLO,
+    SRO,
+    ROL,
+    ROR,
+    SBCLR,
+    SBSET,
+    SBINV,
+    SBEXT,
+    GREV,
+    SLOI,
+    SROI,
+    RORI,
+    SBCLRI,
+    SBSETI,
+    SBINVI,
+    SBEXTI,
+    GORCI,
+    GREVI,
+    CMIX,
+    CMOV,
+    FSL,
+    FSR,
+    FSRI,
+    CLZ,
+    CTZ,
+    PCNT,
+    SEXT_B,
+    SEXT_H,
+    CRC32_B,
+    CRC32_H,
+    CRC32_W,
+    CRC32C_B,
+    CRC32C_H,
+    CRC32C_W,
+    CLMUL,
+    CLMULR,
+    CLMULH,
+    MIN,
+    MAX,
+    MINU,
+    MAXU,
+    SHFL,
+    UNSHFL,
+    BDEP,
+    BEXT,
+    PACK,
+    PACKU,
+    BMATOR,
+    BMATXOR,
+    PACKH,
+    BFP,
+    SHFLI,
+    UNSHFLI,
+    //RV64B instructions
+    ADDIWU,
+    SLLIU_W,
+    ADDWU,
+    SUBWU,
+    BMATFLIP,
+    CRC32_D,
+    CRC32C_D,
+    ADDU_W,
+    SUBU_W,
+    SLOW,
+    SROW,
+    ROLW,
+    RORW,
+    SBCLRW,
+    SBSETW,
+    SBINVW,
+    SBEXTW,
+    GORCW,
+    GREVW,
+    SLOIW,
+    SROIW,
+    RORIW,
+    SBCLRIW,
+    SBSETIW,
+    SBINVIW,
+    GORCIW,
+    GREVIW,
+    FSLW,
+    FSRW,
+    FSRIW,
+    CLZW,
+    CTZW,
+    PCNTW,
+    CLMULW,
+    CLMULRW,
+    CLMULHW,
+    SHFLW,
+    UNSHFLW,
+    BDEPW,
+    BEXTW,
+    PACKW,
+    PACKUW,
+    BFPW,
     // RV32M instructions
     MUL,
     MULH,
@@ -315,6 +421,219 @@ package riscv_instr_pkg;
     AMOMAX_D,
     AMOMINU_D,
     AMOMAXU_D,
+    // Vector instructions
+    VSETVL,
+    VSETVLI,
+    VADD,
+    VSUB,
+    VRSUB,
+    VWADDU,
+    VWSUBU,
+    VWADD,
+    VWSUB,
+    VADC,
+    VMADC,
+    VSBC,
+    VMSBC,
+    VAND,
+    VOR,
+    VXOR,
+    VSLL,
+    VSRL,
+    VSRA,
+    VNSRL,
+    VNSRA,
+    VMSEQ,
+    VMSNE,
+    VMSLTU,
+    VMSLT,
+    VMSLEU,
+    VMSLE,
+    VMSGTU,
+    VMSGT,
+    VMINU,
+    VMIN,
+    VMAXU,
+    VMAX,
+    VMUL,
+    VMULH,
+    VMULHU,
+    VMULHSU,
+    VDIVU,
+    VDIV,
+    VREMU,
+    VREM,
+    VWMUL,
+    VWMULU,
+    VWMULSU,
+    VMACC,
+    VNMSAC,
+    VMADD,
+    VNMSUB,
+    VWMACCU,
+    VWMACC,
+    VWMACCSU,
+    VWMACCUS,
+    //VQMACCU,
+    //VQMACC,
+    //VQMACCSU,
+    //VQMACCUS,
+    VMERGE,
+    VMV,
+    VSADDU,
+    VSADD,
+    VSSUBU,
+    VSSUB,
+    VAADDU,
+    VAADD,
+    VASUBU,
+    VASUB,
+    VSSRL,
+    VSSRA,
+    VNCLIPU,
+    VNCLIP,
+    // 14. Vector Floating-Point Instructions
+    VFADD,
+    VFSUB,
+    VFRSUB,
+    VFMUL,
+    VFDIV,
+    VFRDIV,
+    VFWMUL,
+    VFMACC,
+    VFNMACC,
+    VFMSAC,
+    VFNMSAC,
+    VFMADD,
+    VFNMADD,
+    VFMSUB,
+    VFNMSUB,
+    VFWMACC,
+    VFWNMACC,
+    VFWMSAC,
+    VFWNMSAC,
+    VFSQRT_V,
+    VFMIN,
+    VFMAX,
+    VFSGNJ,
+    VFSGNJN,
+    VFSGNJX,
+    VMFEQ,
+    VMFNE,
+    VMFLT,
+    VMFLE,
+    VMFGT,
+    VMFGE,
+    VFCLASS_V,
+    VFMERGE,
+    VFMV,
+    VFCVT_XU_F_V,
+    VFCVT_X_F_V,
+    VFCVT_F_XU_V,
+    VFCVT_F_X_V,
+    VFWCVT_XU_F_V,
+    VFWCVT_X_F_V,
+    VFWCVT_F_XU_V,
+    VFWCVT_F_X_V,
+    VFWCVT_F_F_V,
+    VFNCVT_XU_F_W,
+    VFNCVT_X_F_W,
+    VFNCVT_F_XU_W,
+    VFNCVT_F_X_W,
+    VFNCVT_F_F_W,
+    VFNCVT_ROD_F_F_W,
+    // 15. Vector reduction instruction
+    VREDSUM_VS,
+    VREDMAXU_VS,
+    VREDMAX_VS,
+    VREDMINU_VS,
+    VREDMIN_VS,
+    VREDAND_VS,
+    VREDOR_VS,
+    VREDXOR_VS,
+    VWREDSUMU_VS,
+    VWREDSUM_VS,
+    VFREDOSUM_VS,
+    VFREDSUM_VS,
+    VFREDMAX_VS,
+    VFWREDOSUM_VS,
+    VFWREDSUM_VS,
+    // Vector mask instruction
+    VMAND_MM,
+    VMNAND_MM,
+    VMANDNOT_MM,
+    VMXOR_MM,
+    VMOR_MM,
+    VMNOR_MM,
+    VMORNOT_MM,
+    VMXNOR_MM,
+    VPOPC_M,
+    VFIRST_M,
+    VMSBF_M,
+    VMSIF_M,
+    VMSOF_M,
+    VIOTA_M,
+    VID_V,
+    // Vector permutation instruction
+    VMV_X_S,
+    VMV_S_X,
+    VFMV_F_S,
+    VFMV_S_F,
+    VSLIDEUP,
+    VSLIDEDOWN,
+    VSLIDE1UP,
+    VSLIDE1DOWN,
+    VRGATHER,
+    VCOMPRESS,
+    VMV1R_V,
+    VMV2R_V,
+    VMV4R_V,
+    VMV8R_V,
+    // Vector load/store instruction
+    VLE_V,
+    VSE_V,
+    VLB_V,
+    VSB_V,
+    VLH_V,
+    VSH_V,
+    VLW_V,
+    VSW_V,
+    VLBU_V,
+    VLHU_V,
+    VLWU_V,
+    VLSB_V,
+    VLSH_V,
+    VLSW_V,
+    VLSBU_V,
+    VLSHU_V,
+    VLSWU_V,
+    VLSE_V,
+    VSSB_V,
+    VSSH_V,
+    VSSW_V,
+    VSSE_V,
+    VLXB_V,
+    VLXH_V,
+    VLXW_V,
+    VLXBU_V,
+    VLXHU_V,
+    VLXWU_V,
+    VLXE_V,
+    VSXB_V,
+    VSXH_V,
+    VSXW_V,
+    VSXE_V,
+    VSUXB_V,
+    VSUXH_V,
+    VSUXW_V,
+    VSUXE_V,
+    VLBFF_V,
+    VLHFF_V,
+    VLWFF_V,
+    VLBUFF_V,
+    VLHUFF_V,
+    VLWUFF_V,
+    VLEFF_V,
     // Supervisor instruction
     DRET,
     MRET,
@@ -322,13 +641,17 @@ package riscv_instr_pkg;
     SRET,
     WFI,
     SFENCE_VMA,
-    `VECTOR_INCLUDE("riscv_instr_pkg_inc_riscv_instr_name_t.sv")
+    // Custom instructions
+    `include "isa/custom/riscv_custom_instr_enum.sv"
     // You can add other instructions here
     INVALID_INSTR
   } riscv_instr_name_t;
 
   // Maximum virtual address bits used by the program
-  parameter MAX_USED_VADDR_BITS = 30;
+  parameter int MAX_USED_VADDR_BITS = 30;
+
+  parameter int SINGLE_PRECISION_FRACTION_BITS = 23;
+  parameter int DOUBLE_PRECISION_FRACTION_BITS = 52;
 
   typedef enum bit [4:0] {
     ZERO = 5'b00000,
@@ -336,12 +659,15 @@ package riscv_instr_pkg;
     S2, S3, S4, S5, S6, S7, S8, S9, S10, S11, T3, T4, T5, T6
   } riscv_reg_t;
 
-  `VECTOR_INCLUDE("riscv_instr_pkg_inc_enum.sv")
+  typedef enum bit [4:0] {
+    FT0, FT1, FT2, FT3, FT4, FT5, FT6, FT7, FS0, FS1, FA0, FA1, FA2, FA3, FA4, FA5,
+    FA6, FA7, FS2, FS3, FS4, FS5, FS6, FS7, FS8, FS9, FS10, FS11, FT8, FT9, FT10, FT11
+  } riscv_fpr_t;
 
   typedef enum bit [4:0] {
-    F0, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12, F13, F14, F15,
-    F16, F17, F18, F19, F20, F21, F22, F23, F24, F25, F26, F27, F28, F29, F30, F31
-  } riscv_fpr_t;
+    V0, V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12, V13, V14, V15,
+    V16, V17, V18, V19, V20, V21, V22, V23, V24, V25, V26, V27, V28, V29, V30, V31
+  } riscv_vreg_t;
 
   typedef enum bit [5:0] {
     J_FORMAT = 0,
@@ -351,6 +677,7 @@ package riscv_instr_pkg;
     R_FORMAT,
     S_FORMAT,
     R4_FORMAT,
+    // Compressed instruction format
     CI_FORMAT,
     CB_FORMAT,
     CJ_FORMAT,
@@ -359,9 +686,36 @@ package riscv_instr_pkg;
     CL_FORMAT,
     CS_FORMAT,
     CSS_FORMAT,
-    `VECTOR_INCLUDE("riscv_instr_pkg_inc_riscv_instr_format_t.sv")
-    CIW_FORMAT // (last one)
+    CIW_FORMAT,
+    // Vector instruction format
+    VSET_FORMAT,
+    VA_FORMAT,
+    VS2_FORMAT, // op vd,vs2
+    VL_FORMAT,
+    VS_FORMAT,
+    VLV_FORMAT,
+    VSV_FORMAT,
+    VLS_FORMAT,
+    VSS_FORMAT
   } riscv_instr_format_t;
+
+
+  // Vector arithmetic instruction variant
+  typedef enum bit [3:0] {
+    VV,
+    VI,
+    VX,
+    VF,
+    WV,
+    WI,
+    WX,
+    VVM,
+    VIM,
+    VXM,
+    VFM,
+    VS,
+    VM
+  } va_variant_t;
 
   typedef enum bit [5:0] {
     LOAD = 0,
@@ -611,8 +965,13 @@ package riscv_instr_pkg;
     DCSR            = 'h7B0,  // Debug control and status register
     DPC             = 'h7B1,  // Debug PC
     DSCRATCH0       = 'h7B2,  // Debug scratch register
-    `VECTOR_INCLUDE("riscv_instr_pkg_inc_privileged_reg_t.sv")
-    DSCRATCH1       = 'h7B3  // Debug scratch register (last one)
+    DSCRATCH1       = 'h7B3,  // Debug scratch register (last one)
+    VSTART          = 'h008,  // Vector start position
+    VXSTAT          = 'h009,  // Fixed point saturate flag
+    VXRM            = 'h00A,  // Fixed point rounding mode
+    VL              = 'hC20,  // Vector length
+    VTYPE           = 'hC21,  // Vector data type register
+    VLENB           = 'hC22   // VLEN/8 (vector register length in bytes)
   } privileged_reg_t;
 
   typedef enum bit [5:0] {
@@ -725,18 +1084,87 @@ package riscv_instr_pkg;
 
   `include "riscv_core_setting.sv"
 
-  // TODO hardware target definition so should move to riscv_core_setting.sv
-  `ifdef ENABLE_VECTORS
-    parameter bit has_vector_engine = 'b1;
-    parameter int VLEN = `VLEN;
-    parameter int ELEN = `ELEN;
-    parameter int SLEN = `SLEN;
-  `else
-    parameter bit has_vector_engine = 'b0;
-    parameter int VLEN = 512;
-    parameter int ELEN = 64;
-    parameter int SLEN = 64;
-  `endif
+  // PMP address matching mode
+  typedef enum bit [1:0] {
+    OFF   = 2'b00,
+    TOR   = 2'b01,
+    NA4   = 2'b10,
+    NAPOT = 2'b11
+  } pmp_addr_mode_t;
+
+  // PMP configuration register layout
+  // This configuration struct includes the pmp address for simplicity
+  // TODO (udinator) allow a full 34 bit address for rv32?
+`ifdef _VCP //GRK958
+  typedef struct packed {
+    bit                   l;
+    bit [1:0]                  zero;
+    pmp_addr_mode_t       a;
+    bit                   x;
+    bit                   w;
+    bit                   r;
+    // RV32: the pmpaddr is the top 32 bits of a 34 bit PMP address
+    // RV64: the pmpaddr is the top 54 bits of a 56 bit PMP address
+    bit [XLEN - 1 : 0]    addr;
+    // The offset from the address of <main> - automatically populated by the
+    // PMP generation routine.
+    bit [XLEN - 1 : 0]    offset;
+`else
+  typedef struct{
+    rand bit                   l;
+    bit [1:0]                  zero;
+    rand pmp_addr_mode_t       a;
+    rand bit                   x;
+    rand bit                   w;
+    rand bit                   r;
+    // RV32: the pmpaddr is the top 32 bits of a 34 bit PMP address
+    // RV64: the pmpaddr is the top 54 bits of a 56 bit PMP address
+    bit [XLEN - 1 : 0]    addr;
+    // The offset from the address of <main> - automatically populated by the
+    // PMP generation routine.
+    rand bit [XLEN - 1 : 0]    offset;
+`endif
+  } pmp_cfg_reg_t;
+
+  function automatic string hart_prefix(int hart = 0);
+    if (NUM_HARTS <= 1) begin
+      return "";
+    end else begin
+      return $sformatf("h%0d_", hart);
+    end
+  endfunction : hart_prefix
+
+  function automatic string get_label(string label, int hart = 0);
+    return {hart_prefix(hart), label};
+  endfunction : get_label
+
+  typedef struct packed {
+    bit ill;
+    bit [XLEN-2:7] reserved;
+    int vediv;
+    int vsew;
+    int vlmul;
+  } vtype_t;
+
+  typedef enum bit [1:0] {
+    RoundToNearestUp,
+    RoundToNearestEven,
+    RoundDown,
+    RoundToOdd
+  } vxrm_t;
+
+  typedef enum int {
+    ZBB,
+    ZBS,
+    ZBP,
+    ZBE,
+    ZBF,
+    ZBC,
+    ZBR,
+    ZBM,
+    ZBT,
+    ZB_TMP // for uncategorized instructions
+  } b_ext_group_t;
 
   `VECTOR_INCLUDE("riscv_instr_pkg_inc_variables.sv")
 
@@ -747,19 +1175,19 @@ package riscv_instr_pkg;
   parameter bit [XLEN - 1 : 0] SUM_BIT_MASK  = 'h1 << 18;
   parameter bit [XLEN - 1 : 0] MPP_BIT_MASK  = 'h3 << 11;
 
-  parameter IMM25_WIDTH = 25;
-  parameter IMM12_WIDTH = 12;
-  parameter INSTR_WIDTH = 32;
-  parameter DATA_WIDTH  = 32;
+  parameter int IMM25_WIDTH = 25;
+  parameter int IMM12_WIDTH = 12;
+  parameter int INSTR_WIDTH = 32;
+  parameter int DATA_WIDTH  = 32;
 
   // Parameters for output assembly program formatting
-  parameter MAX_INSTR_STR_LEN = 11;
-  parameter LABEL_STR_LEN     = 18;
+  parameter int MAX_INSTR_STR_LEN = 11;
+  parameter int LABEL_STR_LEN     = 18;
 
   // Parameter for program generation
-  parameter MAX_CALLSTACK_DEPTH = 20;
-  parameter MAX_SUB_PROGRAM_CNT = 20;
-  parameter MAX_CALL_PER_FUNC   = 5;
+  parameter int MAX_CALLSTACK_DEPTH = 20;
+  parameter int MAX_SUB_PROGRAM_CNT = 20;
+  parameter int MAX_CALL_PER_FUNC   = 5;
 
   string indent = {LABEL_STR_LEN{" "}};
 
@@ -826,7 +1254,8 @@ package riscv_instr_pkg;
         instr.push_back($sformatf("csrr x%0d, 0x%0x // MSTATUS", tp, status));
         instr.push_back($sformatf("srli x%0d, x%0d, 11", tp, tp));  // Move MPP to bit 0
         instr.push_back($sformatf("andi x%0d, x%0d, 0x3", tp, tp)); // keep the MPP bits
-        instr.push_back($sformatf("xori x%0d, x%0d, 0x3", tp, tp)); // Check if MPP equals to M-mode('b11)
+        // Check if MPP equals to M-mode('b11)
+        instr.push_back($sformatf("xori x%0d, x%0d, 0x3", tp, tp));
         instr.push_back($sformatf("bnez x%0d, 1f", tp));      // Use physical address for kernel SP
         // Use virtual address for stack pointer
         instr.push_back($sformatf("slli x%0d, x%0d, %0d", sp, sp, XLEN - MAX_USED_VADDR_BITS));
@@ -863,6 +1292,53 @@ package riscv_instr_pkg;
     end
   endfunction
 
+  // Get an integer argument from comand line
+  function automatic void get_int_arg_value(string cmdline_str, ref int val);
+    string s;
+    if(inst.get_arg_value(cmdline_str, s)) begin
+      val = s.atoi();
+    end
+  endfunction
+
+  // Get a bool argument from comand line
+  function automatic void get_bool_arg_value(string cmdline_str, ref bit val);
+    string s;
+    if(inst.get_arg_value(cmdline_str, s)) begin
+      val = s.atobin();
+    end
+  endfunction
+
+  // Get a hex argument from command line
+  function automatic void get_hex_arg_value(string cmdline_str,
+                                            ref bit [XLEN - 1 : 0] val);
+    string s;
+    if(inst.get_arg_value(cmdline_str, s)) begin
+      val = s.atohex();
+    end
+  endfunction
+
+  class cmdline_enum_processor #(parameter type T = riscv_instr_group_t);
+    static function void get_array_values(string cmdline_str, ref T vals[]);
+      string s;
+      void'(inst.get_arg_value(cmdline_str, s));
+      if(s != "") begin
+        string cmdline_list[$];
+        T value;
+        uvm_split_string(s, ",", cmdline_list);
+        vals = new[cmdline_list.size];
+        foreach (cmdline_list[i]) begin
+          if (uvm_enum_wrapper#(T)::from_name(
+             cmdline_list[i].toupper(), value)) begin
+            vals[i] = value;
+          end else begin
+            `uvm_fatal("riscv_instr_pkg", $sformatf(
+                "Invalid value (%0s) specified in command line: %0s", cmdline_list[i], cmdline_str))
+          end
+        end
+      end
+    endfunction
+  endclass
+
   riscv_reg_t all_gpr[] = {ZERO, RA, SP, GP, TP, T0, T1, T2, S0, S1, A0,
                            A1, A2, A3, A4, A5, A6, A7, S2, S3, S4, S5, S6,
                            S7, S8, S9, S10, S11, T3, T4, T5, T6};
@@ -874,35 +1350,60 @@ package riscv_instr_pkg;
     SYNCH, SYSTEM, COUNTER, CSR, CHANGELEVEL, TRAP, INTERRUPT, AMO
   };
 
-  `ifdef DEPRECATED
-    `define INSTR riscv_instr_base
-    `include "deprecated/riscv_instr_base.sv"
-    `include "deprecated/riscv_instr_gen_config.sv"
-  `else
-    `define INSTR riscv_instr
-    typedef class riscv_instr;
-    `include "riscv_instr_gen_config.sv"
-    `include "isa/riscv_instr.sv"
-    `include "isa/riscv_amo_instr.sv"
-    `include "isa/riscv_floating_point_instr.sv"
-    `include "isa/riscv_vector_instr.sv"
-    `include "isa/riscv_compressed_instr.sv"
-    `include "isa/rv32a_instr.sv"
-    `include "isa/rv32c_instr.sv"
-    `include "isa/rv32dc_instr.sv"
-    `include "isa/rv32d_instr.sv"
-    `include "isa/rv32fc_instr.sv"
-    `include "isa/rv32f_instr.sv"
-    `include "isa/rv32i_instr.sv"
-    `include "isa/rv32m_instr.sv"
-    `include "isa/rv64a_instr.sv"
-    `include "isa/rv64c_instr.sv"
-    `include "isa/rv64d_instr.sv"
-    `include "isa/rv64f_instr.sv"
-    `include "isa/rv64i_instr.sv"
-    `include "isa/rv64m_instr.sv"
-    `include "isa/rv128c_instr.sv"
-  `endif
+  function automatic void get_val(input string str, output bit [XLEN-1:0] val, input hex = 0);
+    if (str.len() > 2) begin
+      if (str.substr(0, 1) == "0x") begin
+        str = str.substr(2, str.len() -1);
+        val = str.atohex();
+        return;
+      end
+    end
+    if (hex) begin
+      val = str.atohex();
+    end else begin
+      if (str.substr(0, 0) == "-") begin
+        str = str.substr(1, str.len() - 1);
+        val = -str.atoi();
+      end else begin
+        val = str.atoi();
+      end
+    end
+    `uvm_info("riscv_instr_pkg", $sformatf("imm:%0s -> 0x%0x/%0d", str, val, $signed(val)),
+              UVM_FULL)
+  endfunction : get_val
+
+  `include "riscv_vector_cfg.sv"
+  `include "riscv_pmp_cfg.sv"
+  typedef class riscv_instr;
+  typedef class riscv_b_instr;
+  `include "riscv_instr_gen_config.sv"
+  `include "isa/riscv_instr.sv"
+  `include "isa/riscv_amo_instr.sv"
+  `include "isa/riscv_b_instr.sv"
+  `include "isa/riscv_floating_point_instr.sv"
+  `include "isa/riscv_vector_instr.sv"
+  `include "isa/riscv_compressed_instr.sv"
+  `include "isa/rv32a_instr.sv"
+  `include "isa/rv32c_instr.sv"
+  `include "isa/rv32dc_instr.sv"
+  `include "isa/rv32d_instr.sv"
+  `include "isa/rv32fc_instr.sv"
+  `include "isa/rv32f_instr.sv"
+  `include "isa/rv32i_instr.sv"
+  `include "isa/rv32b_instr.sv"
+  `include "isa/rv32m_instr.sv"
+  `include "isa/rv64a_instr.sv"
+  `include "isa/rv64b_instr.sv"
+  `include "isa/rv64c_instr.sv"
+  `include "isa/rv64d_instr.sv"
+  `include "isa/rv64f_instr.sv"
+  `include "isa/rv64i_instr.sv"
+  `include "isa/rv64m_instr.sv"
+  `include "isa/rv128c_instr.sv"
+  `include "isa/rv32v_instr.sv"
+  `include "isa/custom/riscv_custom_instr.sv"
+  `include "isa/custom/rv32x_instr.sv"
+  `include "isa/custom/rv64x_instr.sv"
 
   `include "riscv_pseudo_instr.sv"
   `include "riscv_illegal_instr.sv"
@@ -916,25 +1417,15 @@ package riscv_instr_pkg;
   `include "riscv_callstack_gen.sv"
   `include "riscv_data_page_gen.sv"
 
-`ifdef DEPRECATED
-  `include "deprecated/riscv_rand_instr.sv"
-  `include "deprecated/riscv_instr_stream.sv"
-  `include "deprecated/riscv_loop_instr.sv"
-  `include "deprecated/riscv_directed_instr_lib.sv"
-  `include "deprecated/riscv_load_store_instr_lib.sv"
-  `include "deprecated/riscv_amo_instr_lib.sv"
-`else
   `include "riscv_instr_stream.sv"
   `include "riscv_loop_instr.sv"
   `include "riscv_directed_instr_lib.sv"
   `include "riscv_load_store_instr_lib.sv"
   `include "riscv_amo_instr_lib.sv"
-`endif
 
   `include "riscv_instr_sequence.sv"
   `include "riscv_asm_program_gen.sv"
   `include "riscv_debug_rom_gen.sv"
-  `include "riscv_instr_cov_item.sv"
   `include "riscv_instr_cover_group.sv"
   `include "user_extension.svh"
 

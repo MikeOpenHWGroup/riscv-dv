@@ -252,7 +252,7 @@ class riscv_instr_sequence extends uvm_sequence;
   // Convert the instruction stream to the string format.
   // Label is attached to the instruction if available, otherwise attach proper space to make
   // the code indent consistent.
-  function void generate_instr_stream(bit no_label = 1'b0);
+  virtual function void generate_instr_stream(bit no_label = 1'b0);
     string prefix, str;
     int i;
     instr_string_list = {};
@@ -275,16 +275,45 @@ class riscv_instr_sequence extends uvm_sequence;
       str = {prefix, instr_stream.instr_list[i].convert2asm()};
       instr_string_list.push_back(str);
     end
+    // If PMP is supported, need to align <main> to a 4-byte boundary.
+    // TODO(udi) - this might interfere with multi-hart programs,
+    //             may need to specifically match hart0.
+    if (riscv_instr_pkg::support_pmp && !uvm_re_match("*main*", label_name)) begin
+      instr_string_list.push_front(".align 2");
+    end
     insert_illegal_hint_instr();
     prefix = format_string($sformatf("%0d:", i), LABEL_STR_LEN);
     if(!is_main_program) begin
-      if (!cfg.disable_compressed_instr) begin
-        str = {prefix, $sformatf("c.jr x%0d", cfg.ra)};
-      end else begin
-        str = {prefix, $sformatf("jalr x0, x%0d, 0", cfg.ra)};
-      end
-      instr_string_list.push_back(str);
+      generate_return_routine(prefix);
     end
+  endfunction
+
+  function void generate_return_routine(string prefix);
+    string str;
+    int i;
+    riscv_instr_name_t jump_instr[$] = {JALR};
+    bit rand_lsb = $urandom_range(0, 1);
+    riscv_reg_t ra;
+    `DV_CHECK_STD_RANDOMIZE_WITH_FATAL(ra,
+                                       !(ra inside {cfg.reserved_regs});
+                                       ra != ZERO;)
+    // Randomly set lsb of the return address, JALR should zero out lsb automatically
+    str = {prefix, $sformatf("addi x%0d, x%0d, %0d", ra, cfg.ra, rand_lsb)};
+    instr_string_list.push_back(str);
+    if (!cfg.disable_compressed_instr) begin
+      jump_instr.push_back(C_JR);
+      if (!(RA inside {cfg.reserved_regs})) begin
+        jump_instr.push_back(C_JALR);
+      end
+    end
+    i = $urandom_range(0, jump_instr.size() - 1);
+    case (jump_instr[i])
+      C_JALR : str = {prefix, $sformatf("c.jalr x%0d", ra)};
+      C_JR   : str = {prefix, $sformatf("c.jr x%0d", ra)};
+      JALR   : str = {prefix, $sformatf("jalr x%0d, x%0d, 0", ra, ra)};
+      default: `uvm_fatal(`gfn, $sformatf("Unsupported jump_instr %0s", jump_instr[i]))
+    endcase
+    instr_string_list.push_back(str);
   endfunction
 
   function void insert_illegal_hint_instr();
@@ -300,8 +329,8 @@ class riscv_instr_sequence extends uvm_sequence;
         `DV_CHECK_RANDOMIZE_WITH_FATAL(illegal_instr,
                                        exception != kHintInstr;)
         str = {indent, $sformatf(".4byte 0x%s # %0s",
-                       illegal_instr.get_bin_str(), illegal_instr.exception.name())};
-        idx = $urandom_range(0, instr_string_list.size());
+                       illegal_instr.get_bin_str(), illegal_instr.comment)};
+               idx = $urandom_range(0, instr_string_list.size());
         instr_string_list.insert(idx, str);
       end
     end
@@ -313,7 +342,7 @@ class riscv_instr_sequence extends uvm_sequence;
         `DV_CHECK_RANDOMIZE_WITH_FATAL(illegal_instr,
                                        exception == kHintInstr;)
         str = {indent, $sformatf(".2byte 0x%s # %0s",
-                       illegal_instr.get_bin_str(), illegal_instr.exception.name())};
+                       illegal_instr.get_bin_str(), illegal_instr.comment)};
         idx = $urandom_range(0, instr_string_list.size());
         instr_string_list.insert(idx, str);
       end

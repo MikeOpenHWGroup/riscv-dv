@@ -32,6 +32,8 @@ class riscv_instr extends uvm_object;
   static privileged_reg_t    exclude_reg[];
   static privileged_reg_t    include_reg[];
 
+  riscv_instr_gen_config     m_cfg;
+
   // Instruction attributes
   riscv_instr_group_t        group;
   riscv_instr_format_t       format;
@@ -69,8 +71,15 @@ class riscv_instr extends uvm_object;
   bit                        has_imm = 1'b1;
 
   constraint imm_c {
-    if (instr_name inside {SLLI, SRLI, SRAI, SLLIW, SRLIW, SRAIW}) {
+    if (instr_name inside {SLLIW, SRLIW, SRAIW}) {
       imm[11:5] == 0;
+    }
+    if (instr_name inside {SLLI, SRLI, SRAI}) {
+      if (XLEN == 32) {
+        imm[11:5] == 0;
+      } else {
+        imm[11:6] == 0;
+      }
     }
   }
 
@@ -102,8 +111,10 @@ class riscv_instr extends uvm_object;
     instr_category.delete();
     foreach (instr_registry[instr_name]) begin
       riscv_instr instr_inst;
+      if (instr_name inside {unsupported_instr}) continue;
       instr_inst = create_instr(instr_name);
       instr_template[instr_name] = instr_inst;
+      if (!instr_inst.is_supported(cfg)) continue;
       // C_JAL is RV32C only instruction
       if ((XLEN != 32) && (instr_name == C_JAL)) continue;
       if ((SP inside {cfg.reserved_regs}) && (instr_name inside {C_ADDI16SP})) begin
@@ -111,13 +122,14 @@ class riscv_instr extends uvm_object;
       end
       if (!cfg.enable_sfence && instr_name == SFENCE_VMA) continue;
       if (cfg.no_fence && (instr_name inside {FENCE, FENCE_I, SFENCE_VMA})) continue;
-      // TODO: gcc compile issue, support c.addi4spn later
-      if (instr_name == C_ADDI4SPN) continue;
       if ((instr_inst.group inside {supported_isa}) &&
           !(cfg.disable_compressed_instr &&
             (instr_inst.group inside {RV32C, RV64C, RV32DC, RV32FC, RV128C})) &&
           !(!cfg.enable_floating_point &&
-            (instr_inst.group inside {RV32F, RV64F, RV32D, RV64D}))) begin
+            (instr_inst.group inside {RV32F, RV64F, RV32D, RV64D})) &&
+          !(!cfg.enable_vector_extension &&
+            (instr_inst.group inside {RVV}))
+          ) begin
         instr_category[instr_inst.category].push_back(instr_name);
         instr_group[instr_inst.group].push_back(instr_name);
         instr_names.push_back(instr_name);
@@ -126,6 +138,10 @@ class riscv_instr extends uvm_object;
     build_basic_instruction_list(cfg);
     create_csr_filter(cfg);
   endfunction : create_instr_list
+
+  virtual function bit is_supported(riscv_instr_gen_config cfg);
+    return 1;
+  endfunction
 
   static function void create_csr_filter(riscv_instr_gen_config cfg);
     include_reg.delete();
@@ -169,7 +185,8 @@ class riscv_instr extends uvm_object;
     if (!cfg.no_ebreak) begin
       basic_instr = {basic_instr, EBREAK};
       foreach (riscv_instr_pkg::supported_isa[i]) begin
-        if (RV32C inside {riscv_instr_pkg::supported_isa[i]}) begin
+        if (RV32C inside {riscv_instr_pkg::supported_isa[i]} &&
+            !cfg.disable_compressed_instr) begin
           basic_instr = {basic_instr, C_EBREAK};
           break;
         end
@@ -190,28 +207,32 @@ class riscv_instr extends uvm_object;
   endfunction : build_basic_instruction_list
 
   static function riscv_instr get_rand_instr(riscv_instr instr_h = null,
-                                             riscv_instr_name_t include_instr[] = {},
-                                             riscv_instr_name_t exclude_instr[] = {},
-                                             riscv_instr_category_t include_category[] = {},
-                                             riscv_instr_category_t exclude_category[] = {},
-                                             riscv_instr_group_t include_group[] = {},
-                                             riscv_instr_group_t exclude_group[] = {});
+                                             riscv_instr_name_t include_instr[$] = {},
+                                             riscv_instr_name_t exclude_instr[$] = {},
+                                             riscv_instr_category_t include_category[$] = {},
+                                             riscv_instr_category_t exclude_category[$] = {},
+                                             riscv_instr_group_t include_group[$] = {},
+                                             riscv_instr_group_t exclude_group[$] = {});
      int unsigned idx;
      riscv_instr_name_t name;
-     riscv_instr_name_t allowed_instr[];
-     riscv_instr_name_t disallowed_instr[];
-     riscv_instr_category_t allowed_categories[];
+     riscv_instr_name_t allowed_instr[$];
+     riscv_instr_name_t disallowed_instr[$];
+     riscv_instr_category_t allowed_categories[$];
      foreach (include_category[i]) begin
        allowed_instr = {allowed_instr, instr_category[include_category[i]]};
      end
      foreach (exclude_category[i]) begin
-       disallowed_instr = {disallowed_instr, instr_category[exclude_category[i]]};
+       if (instr_category.exists(exclude_category[i])) begin
+         disallowed_instr = {disallowed_instr, instr_category[exclude_category[i]]};
+       end
      end
      foreach (include_group[i]) begin
        allowed_instr = {allowed_instr, instr_group[include_group[i]]};
      end
      foreach (exclude_group[i]) begin
-       disallowed_instr = {disallowed_instr, instr_group[exclude_group[i]]};
+       if (instr_group.exists(exclude_group[i])) begin
+         disallowed_instr = {disallowed_instr, instr_group[exclude_group[i]]};
+       end
      end
      disallowed_instr = {disallowed_instr, exclude_instr};
      if (disallowed_instr.size() == 0) begin
@@ -259,6 +280,16 @@ class riscv_instr extends uvm_object;
      instr_h = new instr_template[name];
      return instr_h;
   endfunction : get_load_store_instr
+
+  static function riscv_instr get_instr(riscv_instr_name_t name);
+     riscv_instr instr_h;
+     if (!instr_template.exists(name)) begin
+       `uvm_fatal("riscv_instr", $sformatf("Cannot get instr %0s", name.name()))
+     end
+     // Shallow copy for all relevant fields, avoid using create() to improve performance
+     instr_h = new instr_template[name];
+     return instr_h;
+  endfunction : get_instr
 
   // Disable the rand mode for unused operands to randomization performance
   virtual function void set_rand_mode();
@@ -354,6 +385,8 @@ class riscv_instr extends uvm_object;
           end else begin
             asm_str = $sformatf("%0s%0s, %0s, %0s", asm_str, rd.name(), rs1.name(), rs2.name());
           end
+        default: `uvm_fatal(`gfn, $sformatf("Unsupported format %0s [%0s]",
+                                            format.name(), instr_name.name()))
       endcase
     end else begin
       // For EBREAK,C.EBREAK, making sure pc+4 is a valid instruction boundary
@@ -534,13 +567,13 @@ class riscv_instr extends uvm_object;
         else if(instr_name == ECALL)
           binary = $sformatf("%8h", {get_func7(), 18'b0, get_opcode()});
         else if(instr_name inside {URET, SRET, MRET})
-          binary = $sformatf("%8h", {get_func7(), 5'b10, 13'b0, get_opcode()});
+          binary = $sformatf("%8h", {get_func7(), 5'b00010, 13'b0, get_opcode()});
         else if(instr_name inside {DRET})
           binary = $sformatf("%8h", {get_func7(), 5'b10010, 13'b0, get_opcode()});
         else if(instr_name == EBREAK)
-          binary = $sformatf("%8h", {get_func7(), 5'b01, 13'b0, get_opcode()});
+          binary = $sformatf("%8h", {get_func7(), 5'd1, 13'b0, get_opcode()});
         else if(instr_name == WFI)
-          binary = $sformatf("%8h", {get_func7(), 5'b101, 13'b0, get_opcode()});
+          binary = $sformatf("%8h", {get_func7(), 5'b00101, 13'b0, get_opcode()});
         else
           binary = $sformatf("%8h", {imm[11:0], rs1, get_func3(), rd, get_opcode()});
       end
@@ -560,6 +593,7 @@ class riscv_instr extends uvm_object;
         else
           binary = $sformatf("%8h", {get_func7(), rs2, rs1, get_func3(), rd, get_opcode()});
       end
+      default: `uvm_fatal(`gfn, $sformatf("Unsupported format %0s", format.name()))
     endcase
     return {prefix, binary};
   endfunction
@@ -618,5 +652,7 @@ class riscv_instr extends uvm_object;
   virtual function void update_imm_str();
     imm_str = $sformatf("%0d", $signed(imm));
   endfunction
+
+  `include "isa/riscv_instr_cov.svh"
 
 endclass

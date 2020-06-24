@@ -39,6 +39,9 @@ mtvec_mode_t supported_interrupt_mode[$] = {DIRECT, VECTORED};
 // supported
 int max_interrupt_vector_num = 16;
 
+// Physical memory protection support
+bit support_pmp = 0;
+
 // Debug mode support
 bit support_debug_mode = 0;
 
@@ -51,6 +54,38 @@ bit support_sfence = 0;
 // Support unaligned load/store
 bit support_unaligned_load_store = 1'b1;
 
+// GPR setting
+parameter int NUM_FLOAT_GPR = 32;
+parameter int NUM_GPR = 32;
+parameter int NUM_VEC_GPR = 32;
+// ----------------------------------------------------------------------------
+// Vector extension configuration
+// ----------------------------------------------------------------------------
+
+// Parameter for vector extension
+parameter int VECTOR_EXTENSION_ENABLE = 0;
+
+parameter int VLEN = 512;
+
+// Maximum size of a single vector element
+parameter int ELEN = 32;
+
+// Minimum size of a sub-element, which must be at most 8-bits.
+parameter int SELEN = 8;
+
+// Maximum size of a single vector element (encoded in vsew format)
+parameter int VELEN = int'($ln(ELEN)/$ln(2)) - 3;
+
+// Maxium LMUL supported by the core
+parameter int MAX_LMUL = 8;
+
+// ----------------------------------------------------------------------------
+// Multi-harts configuration
+// ----------------------------------------------------------------------------
+
+// Number of harts
+parameter int NUM_HARTS = 1;
+
 // ----------------------------------------------------------------------------
 // Previleged CSR implementation
 // ----------------------------------------------------------------------------
@@ -59,7 +94,7 @@ bit support_unaligned_load_store = 1'b1;
 `ifdef DSIM
 privileged_reg_t implemented_csr[] = {
 `else
-parameter privileged_reg_t implemented_csr[] = {
+const privileged_reg_t implemented_csr[] = {
 `endif
     // Machine mode mode CSR
     MVENDORID,  // Vendor ID
@@ -85,7 +120,7 @@ parameter privileged_reg_t implemented_csr[] = {
 `ifdef DSIM
 interrupt_cause_t implemented_interrupt[] = {
 `else
-parameter interrupt_cause_t implemented_interrupt[] = {
+const interrupt_cause_t implemented_interrupt[] = {
 `endif
     M_SOFTWARE_INTR,
     M_TIMER_INTR,
@@ -95,9 +130,8 @@ parameter interrupt_cause_t implemented_interrupt[] = {
 `ifdef DSIM
 exception_cause_t implemented_exception[] = {
 `else
-parameter exception_cause_t implemented_exception[] = {
+const exception_cause_t implemented_exception[] = {
 `endif
-    INSTRUCTION_ADDRESS_MISALIGNED,
     INSTRUCTION_ACCESS_FAULT,
     ILLEGAL_INSTRUCTION,
     BREAKPOINT,

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 class riscv_compressed_instr extends riscv_instr;
 
   int imm_align;
@@ -35,6 +51,9 @@ class riscv_compressed_instr extends riscv_instr;
       if (instr_name inside {C_SRAI, C_SRLI, C_SLLI}) {
         imm[31:5] == 0;
       }
+    }
+    if (instr_name == C_ADDI4SPN) {
+      imm[1:0] == 0;
     }
   }
 
@@ -168,6 +187,8 @@ class riscv_compressed_instr extends riscv_instr;
             asm_str = "c.nop";
           else if (instr_name == C_ADDI16SP)
             asm_str = $sformatf("%0ssp, %0s", asm_str, get_imm());
+          else if (instr_name == C_ADDI4SPN)
+            asm_str = $sformatf("%0s%0s, sp, %0s", asm_str, rd.name(), get_imm());
           else if (instr_name inside {C_LDSP, C_LWSP, C_LQSP})
             asm_str = $sformatf("%0s%0s, %0s(sp)", asm_str, rd.name(), get_imm());
           else
@@ -196,6 +217,7 @@ class riscv_compressed_instr extends riscv_instr;
           end
         CJ_FORMAT:
           asm_str = $sformatf("%0s%0s", asm_str, get_imm());
+        default: `uvm_info(`gfn, $sformatf("Unsupported format %0s", format.name()), UVM_LOW)
       endcase
     end else begin
       // For EBREAK,C.EBREAK, making sure pc+4 is a valid instruction boundary
@@ -240,7 +262,7 @@ class riscv_compressed_instr extends riscv_instr;
         binary = $sformatf("%4h", {get_func3(), imm[11], imm[4], imm[9:8],
                                    imm[10], imm[6], imm[7], imm[3:1], imm[5], get_c_opcode()});
       C_ADDI16SP:
-        binary = $sformatf("%4h", {get_func3(), imm[9], 5'b10,
+        binary = $sformatf("%4h", {get_func3(), imm[9], 5'b00010,
                                    imm[4], imm[6], imm[8:7], imm[5], get_c_opcode()});
       C_LUI:
         binary = $sformatf("%4h", {get_func3(), imm[5], rd, imm[4:0], get_c_opcode()});

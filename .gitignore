@@ -11,6 +11,10 @@ qrun.out/
 qrun.log
 *.ucdb
 *.vstf
+<<<<<<< HEAD
 dsim.env
 metrics.db
 metrics_history.db
+=======
+riscv_dv.egg-info
+>>>>>>> upstream/master
